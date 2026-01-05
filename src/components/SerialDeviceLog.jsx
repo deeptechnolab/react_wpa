@@ -7,31 +7,51 @@ export default function SerialDeviceLog() {
   const [onlineData, setOnlineData] = useState([]);
   const [online, setOnline] = useState(navigator.onLine);
 
-  // Load IndexedDB data
+  /* ------------------------------
+     Load IndexedDB data
+     ------------------------------ */
   const loadOfflineData = async () => {
     const db = await dbPromise;
     const data = await db.getAll("serial-data");
     setOfflineData(data.reverse());
   };
 
-  // Load ERPNext data
+  /* ------------------------------
+     Load ERPNext data
+     ------------------------------ */
   const loadOnlineData = async () => {
+    if (!navigator.onLine) return;
     const data = await fetchSerialLogsFromERP();
     setOnlineData(data);
   };
 
+  /* ------------------------------
+     Initial load + listeners
+     ------------------------------ */
   useEffect(() => {
+    // initial load
     loadOfflineData();
-    if (navigator.onLine) loadOnlineData();
-
-    window.addEventListener("online", () => {
-      setOnline(true);
+    if (navigator.onLine) {
       loadOnlineData();
-    });
+    }
 
-    window.addEventListener("offline", () => {
+    const handleOnline = () => {
+      setOnline(true);
+      loadOfflineData(); // after sync & cleanup
+      loadOnlineData();  // refresh ERP data
+    };
+
+    const handleOffline = () => {
       setOnline(false);
-    });
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   return (
@@ -55,14 +75,20 @@ export default function SerialDeviceLog() {
           </tr>
         </thead>
         <tbody>
-          {offlineData.map((row) => (
-            <tr key={row.id}>
-              <td>{row.id}</td>
-              <td>{row.data}</td>
-              <td>{row.timestamp}</td>
-              <td>{row.synced ? "✔" : "❌"}</td>
+          {offlineData.length === 0 ? (
+            <tr>
+              <td colSpan="4" align="center">No offline data</td>
             </tr>
-          ))}
+          ) : (
+            offlineData.map((row) => (
+              <tr key={row.id}>
+                <td>{row.id}</td>
+                <td>{row.data}</td>
+                <td>{row.timestamp}</td>
+                <td>{row.synced ? "✔" : "❌"}</td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
 
@@ -80,14 +106,20 @@ export default function SerialDeviceLog() {
               </tr>
             </thead>
             <tbody>
-              {onlineData.map((row) => (
-                <tr key={row.name}>
-                  <td>{row.name}</td>
-                  <td>{row.device_id}</td>
-                  <td>{row.payload}</td>
-                  <td>{row.device_timestamp}</td>
+              {onlineData.length === 0 ? (
+                <tr>
+                  <td colSpan="4" align="center">No ERP data</td>
                 </tr>
-              ))}
+              ) : (
+                onlineData.map((row) => (
+                  <tr key={row.name}>
+                    <td>{row.name}</td>
+                    <td>{row.device_id}</td>
+                    <td>{row.payload}</td>
+                    <td>{row.device_timestamp}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </>

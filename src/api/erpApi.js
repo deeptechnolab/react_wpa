@@ -1,6 +1,7 @@
-const ERP_URL = "http://192.168.2.134:8001/";
-const API_KEY = "6fe88a21fc34db3";
-const API_SECRET = "410a9f5e0182866";
+const ERP_URL = import.meta.env.VITE_ERP_URL;
+const API_KEY = import.meta.env.VITE_API_KEY;
+const API_SECRET = import.meta.env.VITE_API_SECRET;
+
 
 export async function fetchSerialLogsFromERP() {
   if (!navigator.onLine) return [];
